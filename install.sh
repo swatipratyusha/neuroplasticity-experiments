@@ -107,6 +107,13 @@ render() {
 drop() {
   local label="$1"
   launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
+  # Only remove the plist once the job is really gone. Deleting it while the
+  # agent is still loaded hides a running job from both the installer and the
+  # health check, which is the exact silent state this kit exists to avoid.
+  if launchctl list 2>/dev/null | grep -q "$label"; then
+    echo "warning: $label is still loaded and could not be unloaded; leaving its plist in place" >&2
+    return
+  fi
   if [ -f "$AGENTS/$label.plist" ]; then unlink "$AGENTS/$label.plist"; fi
   echo "not installed: $label"
 }
