@@ -22,10 +22,15 @@ cap_reached && { note skip-cap; exit 0; }
 IDLE=$(idle_seconds)
 [ "${IDLE:-99999}" -gt "$PROBE_IDLE_SKIP_S" ] && { note "skip-idle ${IDLE}s"; exit 0; }
 
-# Guarantee at least one late-day sample: if nothing has fired since 18:00,
-# skip the probability gate once the evening hour arrives.
+# Guarantee at least one late-day sample: once the evening hour arrives, skip
+# the probability gate unless an answer has actually landed since 18:00.
+# Answered rows, not "firing" log lines, are the test — a probe that fired and
+# then failed, was killed, or went unanswered did not cover the evening.
+# The lock check keeps a probe still waiting out its delay from being doubled.
 evening_uncovered() {
-  [ "$(date +%H)" -ge "$PROBE_EVENING_HOUR" ] && ! grep -q "^$(date +%F)T\(1[89]\|2[0-9]\):.* firing" "$DATA/probe_runs.log" 2>/dev/null
+  [ "$(date +%H)" -ge "$PROBE_EVENING_HOUR" ] || return 1
+  [ -d "$LOCK" ] && return 1
+  ! grep -E "^$(date +%F)T(1[89]|2[0-9]):" "$OUT" 2>/dev/null | grep -qvE "probe-failed|\(empty\)"
 }
 if [ "${FORCE:-0}" != "1" ]; then          # FORCE=1 bypasses gate + delay for smoke tests
   if evening_uncovered; then
@@ -33,8 +38,8 @@ if [ "${FORCE:-0}" != "1" ]; then          # FORCE=1 bypasses gate + delay for s
     sleep $((RANDOM % 600))
   else
     [ $((RANDOM % 100)) -ge "$PROBE_FIRE_PCT" ] && { note skip-gate; exit 0; }
-    note firing          # logged before the delay: a probe asleep in its delay
-    sleep $((RANDOM % PROBE_MAX_DELAY_S))   # must still count as covering its slot
+    note firing          # before the delay, so a probe asleep in it is visible
+    sleep $((RANDOM % PROBE_MAX_DELAY_S))   # to anyone debugging an apparently silent slot
   fi
 else
   note firing

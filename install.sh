@@ -19,10 +19,22 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+case "$PROBE_HOURS" in
+  <0-23>-<0-23>) [ "${PROBE_HOURS%%-*}" -le "${PROBE_HOURS##*-}" ] || \
+      { echo "--probe-hours start must not be after end: $PROBE_HOURS" >&2; exit 2; } ;;
+  *) echo "--probe-hours must look like 13-21 (hours 0-23): $PROBE_HOURS" >&2; exit 2 ;;
+esac
+case "$DIGEST_AT" in
+  <0-23>:<0-59>) ;;
+  *) echo "--digest-at must look like 21:47: $DIGEST_AT" >&2; exit 2 ;;
+esac
+
 [ -f "$SRC/config.env" ] || cp "$SRC/config.example.env" "$SRC/config.env"
-NEURO_HOME=$(. "$SRC/config.env"; echo "$NEURO_HOME")
+# An exported NEURO_HOME wins, exactly as it does for the instruments.
+NEURO_HOME="${NEURO_HOME:-$(unset NEURO_HOME; . "$SRC/config.env"; echo "$NEURO_HOME")}"
+NEURO_HOME="${NEURO_HOME:A}"          # resolve symlinks: a link out of Documents is still in Documents
 case "$NEURO_HOME" in
-  "$HOME"/Documents/*|"$HOME"/Desktop/*|"$HOME"/Downloads/*)
+  "$HOME"/Documents|"$HOME"/Desktop|"$HOME"/Downloads|"$HOME"/Documents/*|"$HOME"/Desktop/*|"$HOME"/Downloads/*)
     echo "NEURO_HOME is under a TCC-protected folder; launchd agents cannot read it." >&2
     echo "Pick a path outside Documents/Desktop/Downloads in config.env." >&2
     exit 1 ;;
@@ -55,11 +67,24 @@ trap 'rm -f "$SLOT_FILE"' EXIT
 DIGEST_HOUR=${DIGEST_AT%%:*}
 DIGEST_MINUTE=${DIGEST_AT##*:}
 
+# /usr/bin/python3 on a machine without developer tools is a stub that prompts
+# for an install and fails under launchd — the digest agent would load and then
+# never produce anything. Pin an interpreter that demonstrably runs.
+PYTHON=$(command -v python3 || true)
+if [ -z "$PYTHON" ] || ! "$PYTHON" -c "import csv" 2>/dev/null; then
+  echo "No working python3 found — install Xcode command line tools" >&2
+  echo "(xcode-select --install), then re-run. Sampler and probe will still" >&2
+  echo "work; the nightly digest will not." >&2
+  PYTHON=""
+fi
+
 AGENTS="$HOME/Library/LaunchAgents"
 mkdir -p "$AGENTS"
+NEURO_HOME_SED=${NEURO_HOME//[|&\\]/\\&}   # | delimits, & back-references
 render() {
   local label="$1"
-  sed -e "s|__NEURO_HOME__|$NEURO_HOME|g" \
+  sed -e "s|__NEURO_HOME__|$NEURO_HOME_SED|g" \
+      -e "s|__PYTHON__|$PYTHON|g" \
       -e "s|__DIGEST_HOUR__|${DIGEST_HOUR#0}|g" \
       -e "s|__DIGEST_MINUTE__|${DIGEST_MINUTE#0}|g" \
       -e "/__PROBE_SLOTS__/r $SLOT_FILE" \
@@ -72,7 +97,7 @@ render() {
 }
 render com.neuroplasticity.sample
 render com.neuroplasticity.probe
-render com.neuroplasticity.digest
+if [ -n "$PYTHON" ]; then render com.neuroplasticity.digest; fi
 if [ "$BUILD_NEUROLOG" = "1" ]; then render com.neuroplasticity.log; fi
 
 cat <<'NOTE'

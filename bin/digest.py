@@ -30,8 +30,22 @@ def safe_int(v):
         return 0
 
 
+def is_active(row):
+    """A row counts as time at the machine only when idle time was readable.
+
+    An unreadable idle time is not a zero. Treating it as one would silently
+    inflate active minutes with samples the instrument could not actually take.
+    """
+    try:
+        return int(row["idle_s"]) < 120
+    except (TypeError, ValueError, KeyError):
+        return False
+
+
 def summarize(rows):
-    active = [r for r in rows if safe_int(r["idle_s"]) < 120]
+    active = [r for r in rows if is_active(r)]
+    unreadable = sum(1 for r in rows if not str(r.get("idle_s", "")).strip().isdigit())
+    blind = sum(1 for r in rows if r.get("front_app") == "TCC_DENIED")
     app_minutes = Counter(r["front_app"] for r in active)
     switches = sum(1 for a, b in zip(active, active[1:]) if a["front_app"] != b["front_app"])
     title_switches = sum(1 for a, b in zip(active, active[1:])
@@ -41,6 +55,8 @@ def summarize(rows):
     return {
         "sampled_min": len(rows),
         "active_min": len(active),
+        "unreadable_min": unreadable,
+        "blind_min": blind,
         "app_minutes": app_minutes.most_common(8),
         "app_switches": switches,
         "title_switches": title_switches,
@@ -73,7 +89,12 @@ def main():
     probes = load_day_rows("probes.csv")
     events = load_day_rows("events.csv")
     lines = [f"# Digest — {DAY}", ""]
-    lines += [f"- Active at machine: **{s['active_min']} min** of {s['sampled_min']} sampled",
+    lines += [f"- Active at machine: **{s['active_min']} min** of {s['sampled_min']} sampled",]
+    if s["blind_min"] or s["unreadable_min"]:
+        lines += [f"- ⚠️ {s['blind_min']} min could not read the frontmost app "
+                  f"and {s['unreadable_min']} min could not read idle time — those minutes are "
+                  f"missing data, not idle time"]
+    lines += [
               f"- App switches: **{s['app_switches']}** · window/tab switches: **{s['title_switches']}**",
               f"- Peak live agent processes: **{s['agent_procs_max']}** · peak concurrently-active transcripts: **{s['transcripts_max']}**",
               "", "## Time by app (active minutes)"]

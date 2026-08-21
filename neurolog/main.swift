@@ -18,19 +18,28 @@ func resolveNeuroHome() -> URL {
 let neuroHome = resolveNeuroHome()
 let eventsFile = neuroHome.appendingPathComponent("data/events.csv")
 
-func appendEvent(_ text: String) {
+// Returns false when the event did not reach disk. The caller must not claim
+// success it did not get: a logger that confirms every tap while silently
+// dropping rows is worse than one that visibly fails.
+@discardableResult
+func appendEvent(_ text: String) -> Bool {
     let ts = ISO8601DateFormatter.string(from: Date(), timeZone: .current,
                                          formatOptions: [.withFullDate, .withTime, .withColonSeparatorInTime])
     let row = "\(ts),\"\(text.replacingOccurrences(of: "\"", with: "\"\""))\"\n"
-    if !FileManager.default.fileExists(atPath: eventsFile.path) {
-        try? FileManager.default.createDirectory(at: eventsFile.deletingLastPathComponent(),
-                                                 withIntermediateDirectories: true)
-        try? "ts,raw\n".write(to: eventsFile, atomically: true, encoding: .utf8)
-    }
-    if let handle = try? FileHandle(forWritingTo: eventsFile) {
-        handle.seekToEndOfFile()
-        handle.write(row.data(using: .utf8)!)
-        try? handle.close()
+    do {
+        if !FileManager.default.fileExists(atPath: eventsFile.path) {
+            try FileManager.default.createDirectory(at: eventsFile.deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
+            try "ts,raw\n".write(to: eventsFile, atomically: true, encoding: .utf8)
+        }
+        let handle = try FileHandle(forWritingTo: eventsFile)
+        defer { try? handle.close() }
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data(row.utf8))
+        return true
+    } catch {
+        NSLog("NeuroLog: could not append to \(eventsFile.path): \(error)")
+        return false
     }
 }
 
@@ -68,8 +77,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func logPreset(_ sender: NSMenuItem) {
-        appendEvent(sender.title)
-        flashConfirmation()
+        flash(appendEvent(sender.title))
     }
 
     @objc func logCustom() {
@@ -83,13 +91,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
         if alert.runModal() == .alertFirstButtonReturn, !field.stringValue.isEmpty {
-            appendEvent(field.stringValue)
-            flashConfirmation()
+            flash(appendEvent(field.stringValue))
         }
     }
 
-    func flashConfirmation() {
-        statusItem.button?.title = "✅"
+    func flash(_ ok: Bool) {
+        statusItem.button?.title = ok ? "✅" : "⚠️"
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             self.statusItem.button?.title = "🧠"
         }

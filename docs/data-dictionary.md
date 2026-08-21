@@ -8,8 +8,8 @@ uploaded anywhere by this repo.
 | column | meaning |
 |---|---|
 | `ts` | local time, `YYYY-MM-DDTHH:MM:SS` |
-| `idle_s` | seconds since last input. Rows with `idle_s >= 120` are treated as "away" by the digest |
-| `front_app` | frontmost application name; `TCC_DENIED` means macOS refused Automation access and the row is **not** evidence of an empty desktop |
+| `idle_s` | seconds since last input. Rows with `idle_s >= 120` are treated as "away" by the digest. An **empty** value means `ioreg` failed; such rows are excluded from active minutes rather than counted as zero-idle |
+| `front_app` | frontmost application name. `TCC_DENIED` means the sampler could not read it at all — almost always a refused Automation grant, occasionally another scripting error. Either way the minute is **missing data, not an empty desktop**, and the digest counts it separately |
 | `front_title` | frontmost window/tab title (iTerm2 is queried directly — System Events cannot see its window names) |
 | `agent_procs` | running processes matching `SAMPLE_AGENT_PROC_MATCH` |
 | `active_transcripts` | transcript files modified in the last 2 minutes — a live-session count that survives detached processes |
