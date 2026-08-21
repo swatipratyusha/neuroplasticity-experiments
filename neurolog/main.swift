@@ -59,7 +59,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.title = "🧠"
+        showIcon()
         let menu = NSMenu()
         for preset in presets {
             let item = NSMenuItem(title: preset, action: #selector(logPreset(_:)), keyEquivalent: "")
@@ -95,10 +95,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // MenuIcon.png is 36px tall and drawn for exactly this size; asking for 18pt
+    // renders it 1:1 on a Retina menu bar. Scaling any larger artwork down to
+    // here turns it to mush — see neurolog/make_icon.py.
+    func showIcon() {
+        guard let url = Bundle.main.url(forResource: "MenuIcon", withExtension: "png"),
+              let image = NSImage(contentsOf: url) else {
+            statusItem.button?.title = "🧠"        // never leave the menu bar blank
+            return
+        }
+        let height: CGFloat = 18
+        image.size = NSSize(width: image.size.width * height / image.size.height, height: height)
+        image.isTemplate = true                    // macOS tints it for light and dark bars
+        statusItem.button?.image = image
+        statusItem.button?.title = ""
+    }
+
     func flash(_ ok: Bool) {
+        statusItem.button?.image = nil
         statusItem.button?.title = ok ? "✅" : "⚠️"
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            self.statusItem.button?.title = "🧠"
+            self.statusItem.button?.title = ""
+            self.showIcon()
         }
     }
 }

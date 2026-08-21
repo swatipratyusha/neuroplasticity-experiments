@@ -61,8 +61,8 @@ Remove everything with `./uninstall.sh` (agents go, your data stays).
 
 ## The menu bar logger
 
-`install.sh` compiles and loads **NeuroLog**, a 🧠 in your menu bar. Click it and
-one tap logs an event to `events.csv` — *interrupted by a person*, *by a
+`install.sh` compiles and loads **NeuroLog**, a brain in your menu bar. Click it
+and one tap logs an event to `events.csv` — *interrupted by a person*, *by a
 notification*, *by a call*, *focus dipping*, *overloaded — too many threads*,
 *entering deep focus*, *back from break* — plus **Custom note…** (⌘N in the open
 menu) for anything else. The icon flashes ✅ when the row is written and ⚠️ if
@@ -71,6 +71,14 @@ rather than reassuring.
 
 Edit the `presets` array in `neurolog/main.swift` to log what your own study
 cares about, then re-run `install.sh`.
+
+The icon is drawn, not traced. A menu bar item is 18pt tall — roughly 30x36
+device pixels — and any artwork with real detail averages into grey mush at that
+size, so `neurolog/make_icon.py` draws the mark at its final size: a lobed
+outline, one fissure, ordered rungs on one hemisphere and a tangled zigzag on the
+other. It ships as a template image, so macOS tints it to match a light or dark
+menu bar. Change the drawing and re-run `python3 neurolog/make_icon.py` (needs
+Pillow); the committed `MenuIcon.png` means building the app needs no Python.
 
 Two details that took a while to get right, kept here so you do not have to
 rediscover them:
