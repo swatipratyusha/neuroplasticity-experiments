@@ -1,0 +1,8 @@
+# Never commit collected data — it is personal by definition.
+data/
+digests/
+*.csv
+!samples/*.csv
+config.env
+.DS_Store
+neurolog/NeuroLog.app/
