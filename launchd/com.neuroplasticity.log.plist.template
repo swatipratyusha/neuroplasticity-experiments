@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.neuroplasticity.log</string>
+  <!-- `open -W`, not the raw binary: launched as a bare executable the app gets
+       degraded event routing and the menu responds sluggishly. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/open</string>
+    <string>-W</string>
+    <string>-a</string>
+    <string>__NEURO_HOME__/neurolog/NeuroLog.app</string>
+    <string>--args</string>
+    <string>__NEURO_HOME__</string>
+  </array>
+  <key>KeepAlive</key>
+  <dict><key>SuccessfulExit</key><false/></dict>
+  <key>RunAtLoad</key><true/>
+</dict>
+</plist>

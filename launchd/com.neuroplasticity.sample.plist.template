@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.neuroplasticity.sample</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>__NEURO_HOME__/bin/sample.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict><key>NEURO_HOME</key><string>__NEURO_HOME__</string></dict>
+  <key>StartInterval</key><integer>60</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardErrorPath</key><string>__NEURO_HOME__/data/sample.err.log</string>
+</dict>
+</plist>
