@@ -1,0 +1,8 @@
+ts,idle_s,front_app,front_title,agent_procs,active_transcripts,docker_containers
+2026-01-06T09:31:00,3,"iTerm2","claude — api-refactor",4,3,6
+2026-01-06T09:32:00,1,"iTerm2","claude — migration-review",4,3,6
+2026-01-06T09:33:00,0,"Slack","#engineering",4,2,6
+2026-01-06T09:34:00,12,"iTerm2","claude — migration-review",4,2,6
+2026-01-06T09:35:00,0,"Google Chrome","Pull Request #412",5,4,6
+2026-01-06T09:36:00,240,"Google Chrome","Pull Request #412",5,1,6
+2026-01-06T09:37:00,2,"iTerm2","claude — api-refactor",5,4,6
