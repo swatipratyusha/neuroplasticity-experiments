@@ -1,5 +1,12 @@
-# Shared bootstrap for the shell instruments: resolve NEURO_HOME and load config.
-: "${NEURO_HOME:=$HOME/Library/Application Support/neuroplasticity}"
+# Shared bootstrap for the shell instruments: resolve the data root, load config.
+#
+# The data root comes from NEURO_HOME if the caller set one, otherwise from where
+# this file physically sits (bin/../). It is resolved *before* config.env is
+# sourced, and config.env assigns only with :=, so an explicit environment value
+# always wins. Without that, a test pointed at a scratch root would be silently
+# redirected into real collected data.
+_neuro_self="${${(%):-%x}:A}"
+: "${NEURO_HOME:=${_neuro_self:h:h}}"
 [ -f "$NEURO_HOME/config.env" ] && . "$NEURO_HOME/config.env"
 : "${SAMPLE_TRACK_DOCKER:=1}"
 : "${SAMPLE_AGENT_PROC_MATCH:=claude}"

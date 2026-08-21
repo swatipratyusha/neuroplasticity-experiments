@@ -33,8 +33,8 @@ if [ "${FORCE:-0}" != "1" ]; then          # FORCE=1 bypasses gate + delay for s
     sleep $((RANDOM % 600))
   else
     [ $((RANDOM % 100)) -ge "$PROBE_FIRE_PCT" ] && { note skip-gate; exit 0; }
-    sleep $((RANDOM % PROBE_MAX_DELAY_S))
-    note firing
+    note firing          # logged before the delay: a probe asleep in its delay
+    sleep $((RANDOM % PROBE_MAX_DELAY_S))   # must still count as covering its slot
   fi
 else
   note firing
