@@ -45,6 +45,7 @@ func appendEvent(_ text: String) -> Bool {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
+    var flashCount = 0
 
     // Edit freely — these are the events worth one tap rather than a sentence.
     let presets = [
@@ -114,7 +115,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func flash(_ ok: Bool) {
         statusItem.button?.image = nil
         statusItem.button?.title = ok ? "✅" : "⚠️"
+        // Only the most recent flash restores the icon: logging twice in quick
+        // succession would otherwise let the first timer cut the second
+        // confirmation short.
+        flashCount += 1
+        let flash = flashCount
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            guard self.flashCount == flash else { return }
             self.statusItem.button?.title = ""
             self.showIcon()
         }
