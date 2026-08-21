@@ -57,13 +57,13 @@ fi
 
 START=${PROBE_HOURS%%-*}
 END=${PROBE_HOURS##*-}
-SLOT_FILE=$(mktemp)
+SLOTS=""
 h=$START
 while [ "$h" -le "$END" ]; do
-  echo "    <dict><key>Hour</key><integer>$h</integer><key>Minute</key><integer>3</integer></dict>" >> "$SLOT_FILE"
+  SLOTS="$SLOTS    <dict><key>Hour</key><integer>$h</integer><key>Minute</key><integer>3</integer></dict>"
+  if [ "$h" -lt "$END" ]; then SLOTS="$SLOTS"$'\n'; fi
   h=$((h + 1))
 done
-trap 'rm -f "$SLOT_FILE"' EXIT
 DIGEST_HOUR=${DIGEST_AT%%:*}
 DIGEST_MINUTE=${DIGEST_AT##*:}
 
@@ -80,25 +80,41 @@ fi
 
 AGENTS="$HOME/Library/LaunchAgents"
 mkdir -p "$AGENTS"
-NEURO_HOME_SED=${NEURO_HOME//[|&\\]/\\&}   # | delimits, & back-references
+# Templating happens in the shell, not through sed: a data root containing |, &
+# or a backslash silently corrupts a sed replacement, and the result is an agent
+# quietly pointed at the wrong directory. XML-escape what goes into the plist.
+xml_escape() { local v=${1//&/&amp;}; v=${v//</&lt;}; print -r -- "${v//>/&gt;}"; }
+NEURO_HOME_XML=$(xml_escape "$NEURO_HOME")
+PYTHON_XML=$(xml_escape "$PYTHON")
+
 render() {
-  local label="$1"
-  sed -e "s|__NEURO_HOME__|$NEURO_HOME_SED|g" \
-      -e "s|__PYTHON__|$PYTHON|g" \
-      -e "s|__DIGEST_HOUR__|${DIGEST_HOUR#0}|g" \
-      -e "s|__DIGEST_MINUTE__|${DIGEST_MINUTE#0}|g" \
-      -e "/__PROBE_SLOTS__/r $SLOT_FILE" \
-      -e "/__PROBE_SLOTS__/d" \
-      "$SRC/launchd/$label.plist.template" > "$AGENTS/$label.plist"
+  local label="$1" content
+  content=$(<"$SRC/launchd/$label.plist.template")
+  content=${content//__NEURO_HOME__/$NEURO_HOME_XML}
+  content=${content//__PYTHON__/$PYTHON_XML}
+  content=${content//__DIGEST_HOUR__/${DIGEST_HOUR#0}}
+  content=${content//__DIGEST_MINUTE__/${DIGEST_MINUTE#0}}
+  content=${content//__PROBE_SLOTS__/$SLOTS}
+  print -r -- "$content" > "$AGENTS/$label.plist"
   plutil -lint "$AGENTS/$label.plist" >/dev/null
   launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
   launchctl bootstrap "gui/$(id -u)" "$AGENTS/$label.plist"
   echo "loaded $label"
 }
+
+# An agent we are deliberately not installing must not be left loaded from a
+# previous run, still failing on its own schedule.
+drop() {
+  local label="$1"
+  launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
+  if [ -f "$AGENTS/$label.plist" ]; then unlink "$AGENTS/$label.plist"; fi
+  echo "not installed: $label"
+}
+
 render com.neuroplasticity.sample
 render com.neuroplasticity.probe
-if [ -n "$PYTHON" ]; then render com.neuroplasticity.digest; fi
-if [ "$BUILD_NEUROLOG" = "1" ]; then render com.neuroplasticity.log; fi
+if [ -n "$PYTHON" ]; then render com.neuroplasticity.digest; else drop com.neuroplasticity.digest; fi
+if [ "$BUILD_NEUROLOG" = "1" ]; then render com.neuroplasticity.log; else drop com.neuroplasticity.log; fi
 
 cat <<'NOTE'
 

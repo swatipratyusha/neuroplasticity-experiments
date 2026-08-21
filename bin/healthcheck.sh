@@ -18,17 +18,24 @@ say() { echo "$1"; }
 bad() { echo "$1"; FAIL=1; }
 say "      data root: $NEURO_HOME"
 
-# The log agent is optional — installing with --no-neurolog is a valid choice,
-# so only demand it when the app is actually present.
-JOBS=(sample probe digest)
-[ -d "$NEURO_HOME/neurolog/NeuroLog.app" ] && JOBS+=(log)
-for job in $JOBS; do
+# sample and probe are the study. digest and NeuroLog are optional — installing
+# without python3 or with --no-neurolog is a valid choice — so their absence is
+# only a fault when a plist says they were meant to be there.
+AGENTS="$HOME/Library/LaunchAgents"
+check_agent() {
+  local job="$1" required="$2"
   if launchctl list 2>/dev/null | grep -q "com.neuroplasticity.$job"; then
     say "ok    agent com.neuroplasticity.$job loaded"
-  else
+  elif [ -f "$AGENTS/com.neuroplasticity.$job.plist" ] || [ "$required" = required ]; then
     bad "DEAD  agent com.neuroplasticity.$job not loaded"
+  else
+    say "      agent com.neuroplasticity.$job not installed (optional)"
   fi
-done
+}
+check_agent sample required
+check_agent probe required
+check_agent digest optional
+check_agent log optional
 
 TODAY="$DATA/telemetry/$(date +%F).csv"
 if [ -f "$TODAY" ]; then
