@@ -35,6 +35,21 @@ If `swiftc` is missing, the NeuroLog menu-bar app is skipped and the other three
 instruments still work. Say so plainly rather than treating it as a failure;
 offer `xcode-select --install` if they want the app.
 
+Then confirm the 🧠 is actually visible in their menu bar and ask them to log one
+event with it. On a notched display a new status item lands under the notch and
+is unclickable; the installer pins it 300pt from the right edge on first install,
+but if they already had a `NSStatusItem Preferred Position Item-0` default set,
+that pin is deliberately not applied. If they cannot see it, have them widen the
+gap:
+
+```sh
+defaults write com.neuroplasticity.neurolog "NSStatusItem Preferred Position Item-0" -int 500
+launchctl kickstart -k "gui/$(id -u)/com.neuroplasticity.log"
+```
+
+A logger they cannot reach produces an empty `events.csv` that looks exactly like
+a day with nothing worth logging.
+
 ## 3. Force the Automation grant now, not at 2am
 
 The sampler needs Automation access to System Events. Trigger the prompt

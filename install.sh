@@ -49,6 +49,13 @@ chmod +x "$NEURO_HOME/bin/"*
 if [ "$BUILD_NEUROLOG" = "1" ]; then
   if command -v swiftc >/dev/null; then
     "$SRC/neurolog/build.sh" "$NEURO_HOME/neurolog"
+    # A new status item is placed leftmost, which on a notched display puts it
+    # under the notch where it cannot be clicked. Nudge it in from the right —
+    # but only if unset, so a position dragged by hand later is not overwritten.
+    POSITION=$(unset NEUROLOG_MENUBAR_POSITION; . "$SRC/config.env"; echo "${NEUROLOG_MENUBAR_POSITION:-300}")
+    if ! defaults read com.neuroplasticity.neurolog "NSStatusItem Preferred Position Item-0" >/dev/null 2>&1; then
+      defaults write com.neuroplasticity.neurolog "NSStatusItem Preferred Position Item-0" -int "$POSITION"
+    fi
   else
     echo "swiftc not found (install Xcode command line tools) — skipping NeuroLog"
     BUILD_NEUROLOG=0

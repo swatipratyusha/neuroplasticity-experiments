@@ -59,6 +59,54 @@ such a path rather than installing something that silently never writes.
 
 Remove everything with `./uninstall.sh` (agents go, your data stays).
 
+## The menu bar logger
+
+`install.sh` compiles and loads **NeuroLog**, a 🧠 in your menu bar. Click it and
+one tap logs an event to `events.csv` — *interrupted by a person*, *by a
+notification*, *by a call*, *focus dipping*, *overloaded — too many threads*,
+*entering deep focus*, *back from break* — plus **Custom note…** (⌘N in the open
+menu) for anything else. The icon flashes ✅ when the row is written and ⚠️ if
+the write failed, so a logger that has quietly stopped recording is visible
+rather than reassuring.
+
+Edit the `presets` array in `neurolog/main.swift` to log what your own study
+cares about, then re-run `install.sh`.
+
+Two details that took a while to get right, kept here so you do not have to
+rediscover them:
+
+- The agent launches the app with `open -W`, not the raw binary. Launched as a
+  bare executable it gets degraded event routing and the menu becomes sluggish
+  to open — which quietly discourages logging, which biases your data.
+- A brand-new status item is placed leftmost in the menu bar, which on a notched
+  display puts it *under the notch* where you cannot click it. The installer
+  pins it 300pt in from the right edge on first install
+  (`NEUROLOG_MENUBAR_POSITION`), and never afterwards, so a position you drag it
+  to yourself survives re-installs.
+
+Skip it entirely with `./install.sh --no-neurolog`; the other three instruments
+are unaffected.
+
+## The probe popup
+
+Between your configured hours the probe raises a dialog with a soft chime:
+
+```
+Focus check 🧠
+focus 1-5 | threads in head | doing what | what broke focus (- if nothing)
+```
+
+It fires on ~55% of hourly slots after a random delay of up to 40 minutes, caps
+at 5 real answers a day, and skips entirely when you have been away from the
+machine for 10 minutes — so the timing stays unpredictable and the samples stay
+representative. Change the question, cap, rate and timeout in `config.env`; the
+wording is yours, but keep it identical for the whole study or the answers stop
+being comparable.
+
+Answers are stored verbatim and parsed only at analysis time. A dialog you let
+time out is recorded as `(empty)` rather than dropped — knowing when you were
+too deep in something to answer is itself data.
+
 ## Free baseline on day one
 
 If you have been using an agent CLI for a while, you already have history:
